@@ -1,20 +1,13 @@
 <template>
-  <!-- <span>
-    <span @mouseover="$emit('changePixel',value)" v:bind:class="class">x</span>
-  </span> -->
-  <span v-if="value.color" @mouseover="$emit('changePixel',value)" class="background-light">x</span>
-  <span v-else @mouseover="$emit('changePixel',value)" class="background-dark">x</span>
+  <div v-if="value.color" @mouseover="$emit('changePixel',value)" class="background-dark pixel"> </div>
+  <div v-else @mouseover="$emit('changePixel',value)" class="background-light pixel"> </div>
 </template>
 
-<!-- v-bind:class="{'colored': value.color,  'blank': !value.color}" -->
-<!-- :class="[ !value.color ? 'background-dark' : 'background-light' ]" -->
-
 <script>
-
 export default {
-    name: "Pixel",
+  name: "Pixel",
   props: {
-      value: {}
+    value: {}
   }
 };
 </script>
@@ -24,6 +17,7 @@ export default {
   background-color: #000;
 }
 .background-light {
-  background-color: #fff;
+  background-color: #999999;
 }
+
 </style>

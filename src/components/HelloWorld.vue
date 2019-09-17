@@ -2,26 +2,20 @@
   <div class="hello">
     <h1>{{ msg }}</h1>
 
-    <!-- <div v-bind:key="mat.id" v-for="mat in this.matrix"> -->
-    <!-- <div v-for="(mat, index) in this.matrix" v-bind:key="`fruit-${index}`">
-      <span v-bind:key="m.id" v-for="m in mat">
-          <Pixel v-bind:value="m" v-on:changePixel='flipColor'/>
-        </span>
-    </div> -->
+    <div class="canvas">
+      <div v-for="(mat, index) in dataElem" v-bind:key="`fruit-${index}`">
+        <Pixel :key="mat.id" v-bind:value="dataElem[index]" v-on:changePixel="flipColor" />
+      </div>
 
-    <span v-for="(mat, index) in sizeOfMatrix*sizeOfMatrix" v-bind:key="`fruit-${index}`">
-        
-        <span v-if="index % sizeOfMatrix == 0" ><br /></span>
-        <Pixel :key="mat.id" v-bind:value="dataElem[index]" v-on:changePixel='flipColor'/>
-
-    </span>
-    
+    </div>
+    <!-- end .canvas -->
   </div>
 </template> 
 
 
 <script>
-const uuidv4 = require("uuid/v4");  
+var _ = require("lodash");
+const uuidv4 = require("uuid/v4");
 import Pixel from "./Pixel.vue";
 
 export default {
@@ -29,61 +23,36 @@ export default {
   props: {
     msg: String
   },
-  components:{
-      Pixel
+  components: {
+    Pixel
   },
   data() {
     return {
-      matrix: [],
       myAccount: "",
       friendAccount: "",
       identityManager: "",
-      sizeOfMatrix: 20,
+      sizeOfMatrix: 60,
       dataElem: []
     };
   },
   methods: {
-    genBoard() { 
-
-    for (var i = 0; i < this.sizeOfMatrix; i++) {
+    genBoard() {
+      for (var i = 0; i < this.sizeOfMatrix; i++) {
         for (var j = 0; j < this.sizeOfMatrix; j++) {
-          this.dataElem.push({ id: uuidv4(), color: false, x:j, y:i});
+          this.dataElem.push({ id: uuidv4(), color: false, x: j, y: i });
         }
-      }  
-
+      }
     },
     updateBoard(response) {
-     
-        const color = response["color"];
-        const x = parseInt(response["x"]);
-        const y = parseInt(response["y"]);
-
-        for (var i = 0; i < this.dataElem.length; i++) {
-            var elem = this.dataElem[i]
-
-            if(elem.x == x && elem.y == y){
-                this.dataElem.color = color
-            }
-
-        }  
-
+      const x = parseInt(response["x"]);
+      const y = parseInt(response["y"]);
+      let elem = _.find(this.dataElem, { x: x, y: y });
+      elem.color = response["color"];
     },
-    flipColor(pixel){
-
-        const color = !pixel.color;
-        const x = parseInt(pixel.x);
-        const y = parseInt(pixel.y);
-
-        // this.matrix[y][x]["color"] = color;
-        // this.$set(this.matrix, y, this.matrix[y])
-
-        for (var i = 0; i < this.dataElem.length; i++) {
-
-            if(this.dataElem[i].x == x && this.dataElem[i].y == y){
-                this.dataElem[i].color = color
-            }
-
-        }  
+    flipColor(pixel) {
+      let elem = _.find(this.dataElem, { x: pixel.x, y: pixel.y });
+      elem.color = !elem.color;
+    //   this.sendAtom(pixel.x, pixel.y, elem.color);
     },
     createRadix() {
       const radixUniverse = require("radixdlt").radixUniverse;
@@ -110,59 +79,84 @@ export default {
       this.friendAccount.dataSystem
         .getApplicationData("my-test-app")
         .subscribe(appData => {
-            
           this.updateBoard(JSON.parse(appData.data.payload.data));
         });
     },
     sendTestAtoms() {
-      
       const applicationId = "my-test-app";
 
       const RadixTransactionBuilder = require("radixdlt")
         .RadixTransactionBuilder;
-      
+
       for (let index = 0; index < 2; index++) {
+        const payload = JSON.stringify({
+          color: true,
+          x: Math.floor(Math.random() * this.sizeOfMatrix),
+          y: Math.floor(Math.random() * this.sizeOfMatrix)
+        });
 
-            const payload = JSON.stringify({
-                color: true,
-                x: Math.floor(Math.random() * this.sizeOfMatrix),
-                y: Math.floor(Math.random() * this.sizeOfMatrix)
-            });
+        const transactionStatus3 = RadixTransactionBuilder.createPayloadAtom(
+          this.myAccount,
+          [this.friendAccount],
+          applicationId,
+          payload
+        ).signAndSubmit(this.myIdentity);
 
-            const transactionStatus3 =  RadixTransactionBuilder.createPayloadAtom(
-                this.myAccount,
-                [this.friendAccount],
-                applicationId,
-                payload
-            ).signAndSubmit(this.myIdentity);
-
-            transactionStatus3.subscribe({
-                next: status => {
-                console.log(status);
-                // For a valid transaction, this will print, 'FINDING_NOD   E', 'GENERATING_POW', 'SIGNING', 'STORE', 'STORED'
-                },
-                complete: () => {
-                console.log("Transaction complete");
-                },
-                error: error => {
-                console.error("Error submitting transaction", error);
-                }
-            });
-          
+        transactionStatus3.subscribe({
+          next: status => {
+            console.log(status);
+            // For a valid transaction, this will print, 'FINDING_NOD   E', 'GENERATING_POW', 'SIGNING', 'STORE', 'STORED'
+          },
+          complete: () => {
+            console.log("Transaction complete");
+          },
+          error: error => {
+            console.error("Error submitting transaction", error);
+          }
+        });
       }
+    },
+    sendAtom(x, y, color) {
+      const applicationId = "my-test-app";
 
+      const RadixTransactionBuilder = require("radixdlt")
+        .RadixTransactionBuilder;
 
+      const payload = JSON.stringify({
+        color: color,
+        x: x,
+        y: y
+      });
 
+      const transactionStatus3 = RadixTransactionBuilder.createPayloadAtom(
+        this.myAccount,
+        [this.friendAccount],
+        applicationId,
+        payload
+      ).signAndSubmit(this.myIdentity);
+
+      transactionStatus3.subscribe({
+        next: status => {
+          console.log(status);
+          // For a valid transaction, this will print, 'FINDING_NOD   E', 'GENERATING_POW', 'SIGNING', 'STORE', 'STORED'
+        },
+        complete: () => {
+          console.log("Transaction complete");
+        },
+        error: error => {
+          console.error("Error submitting transaction", error);
+        }
+      });
     }
   },
   created() {
-    this.genBoard(), this.createRadix(), this.sendTestAtoms();
+    this.genBoard(), this.createRadix();
   }
 };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
+<style>
 h3 {
   margin: 40px 0 0;
 }
@@ -176,5 +170,17 @@ li {
 }
 a {
   color: #42b983;
+}
+.canvas {
+  /* Perfectly square */
+  width: 600px;
+  height: 600px;
+}
+
+.pixel {
+  /* We'll need 256 total pixels in our HTML */
+  width: 10px;
+  height: 10px;
+  float: left;
 }
 </style>
